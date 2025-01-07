@@ -1,11 +1,19 @@
 from mcp.server.fastmcp import FastMCP, Context
 from pywayne.aliyun_oss import OssManager
-from typing import List, Optional
+from typing import List, Optional, Dict
 import oss2
 import cv2
 import numpy as np
 from pathlib import Path
 import os
+
+# 默认配置
+DEFAULT_CONFIG = {
+    "OSS_ENDPOINT": "xxx",
+    "OSS_BUCKET_NAME": "xxx",
+    "OSS_ACCESS_KEY_ID": "xxx",
+    "OSS_ACCESS_KEY_SECRET": "xxx"
+}
 
 # 初始化 MCP 服务器
 mcp = FastMCP("OSS Bot")
@@ -13,34 +21,36 @@ mcp = FastMCP("OSS Bot")
 class OssBot:
     def __init__(self):
         self.manager = None
+        # 自动初始化
+        self.init_manager()
     
-    def init_manager(self, endpoint: str, bucket_name: str, 
-                    api_key: Optional[str] = None, 
-                    api_secret: Optional[str] = None,
-                    verbose: bool = True):
-        """初始化 OSS 管理器"""
-        self.manager = OssManager(endpoint, bucket_name, api_key, api_secret, verbose)
+    def init_manager(self):
+        """初始化 OSS 管理器（使用默认配置）"""
+        self.manager = OssManager(
+            endpoint=DEFAULT_CONFIG["OSS_ENDPOINT"],
+            bucket_name=DEFAULT_CONFIG["OSS_BUCKET_NAME"],
+            api_key=DEFAULT_CONFIG["OSS_ACCESS_KEY_ID"],
+            api_secret=DEFAULT_CONFIG["OSS_ACCESS_KEY_SECRET"],
+            verbose=True
+        )
 
 # 创建全局 bot 实例        
 bot = OssBot()
 
 @mcp.tool()
-def init_oss(endpoint: str, bucket_name: str, 
-             api_key: Optional[str] = None,
-             api_secret: Optional[str] = None,
-             verbose: bool = True) -> str:
+def get_current_config() -> Dict[str, str]:
     """
-    初始化 OSS 连接
+    获取当前使用的配置信息
     
-    Args:
-        endpoint: OSS endpoint
-        bucket_name: Bucket 名称
-        api_key: API Key（可选）
-        api_secret: API Secret（可选）
-        verbose: 是否打印操作信息
+    Returns:
+        当前配置信息
     """
-    bot.init_manager(endpoint, bucket_name, api_key, api_secret, verbose)
-    return "OSS 连接已初始化"
+    return {
+        "oss_endpoint": DEFAULT_CONFIG["OSS_ENDPOINT"],
+        "oss_bucket_name": DEFAULT_CONFIG["OSS_BUCKET_NAME"],
+        "oss_access_key_id": DEFAULT_CONFIG["OSS_ACCESS_KEY_ID"],
+        "oss_access_key_secret": "***"
+    }
 
 @mcp.tool()
 def download_file(key: str, root_dir: Optional[str] = None) -> bool:
@@ -52,7 +62,7 @@ def download_file(key: str, root_dir: Optional[str] = None) -> bool:
         root_dir: 下载文件的根目录
     """
     if not bot.manager:
-        raise ValueError("请先初始化 OSS 连接")
+        raise ValueError("OSS 连接初始化失败")
     return bot.manager.download_file(key, root_dir)
 
 @mcp.tool()
